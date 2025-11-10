@@ -3,14 +3,19 @@ import EquipmentList from './components/EquipmentList'
 import EquipmentForm from './components/EquipmentForm'
 import LoanRequestForm from './components/LoanRequestForm'
 import LoanList from './components/LoanList'
+import Login from './components/Login'
 
 export default function App() {
   const [view, setView] = useState('equipment')
+  const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('sls_token'))
 
   return (
     <div className="container">
       <header>
         <h1>SLS Equipment Lending</h1>
+
+        <Login onLogin={() => setLoggedIn(!!localStorage.getItem('sls_token'))} />
+
         <nav>
           <button onClick={() => setView('equipment')}>Equipment</button>
           <button onClick={() => setView('new-equipment')}>Add Equipment</button>

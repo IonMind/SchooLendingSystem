@@ -3,6 +3,9 @@ package com.ionmind.sls_backend.controller;
 import com.ionmind.sls_backend.model.Equipment;
 import com.ionmind.sls_backend.service.EquipmentService;
 import org.springframework.http.ResponseEntity;
+import com.ionmind.sls_backend.auth.AuthService;
+import com.ionmind.sls_backend.auth.Role;
+import com.ionmind.sls_backend.auth.User;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,8 +16,11 @@ import java.util.List;
 public class EquipmentController {
     private final EquipmentService equipmentService;
 
-    public EquipmentController(EquipmentService equipmentService) {
+    private final AuthService authService;
+
+    public EquipmentController(EquipmentService equipmentService, AuthService authService) {
         this.equipmentService = equipmentService;
+        this.authService = authService;
     }
 
     @GetMapping
@@ -28,12 +34,19 @@ public class EquipmentController {
     }
 
     @PostMapping
-    public Equipment create(@RequestBody Equipment equipment) {
-        return equipmentService.save(equipment);
+    public ResponseEntity<?> create(@RequestHeader(name="X-Auth-Token", required=false) String token, @RequestBody Equipment equipment) {
+        if (!authService.hasRole(token, Role.ADMIN)) {
+            return ResponseEntity.status(403).body("Only ADMIN can create equipment");
+        }
+        Equipment saved = equipmentService.save(equipment);
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Equipment> update(@PathVariable Long id, @RequestBody Equipment payload) {
+    public ResponseEntity<?> update(@RequestHeader(name="X-Auth-Token", required=false) String token, @PathVariable Long id, @RequestBody Equipment payload) {
+        if (!authService.hasRole(token, Role.ADMIN)) {
+            return ResponseEntity.status(403).body("Only ADMIN can update equipment");
+        }
         return equipmentService.findById(id).map(e -> {
             e.setName(payload.getName());
             e.setCategory(payload.getCategory());
@@ -44,7 +57,10 @@ public class EquipmentController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<?> delete(@RequestHeader(name="X-Auth-Token", required=false) String token, @PathVariable Long id) {
+        if (!authService.hasRole(token, Role.ADMIN)) {
+            return ResponseEntity.status(403).body("Only ADMIN can delete equipment");
+        }
         equipmentService.delete(id);
         return ResponseEntity.ok().build();
     }
