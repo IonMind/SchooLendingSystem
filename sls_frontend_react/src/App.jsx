@@ -8,27 +8,35 @@ import Login from './components/Login'
 export default function App() {
   const [view, setView] = useState('equipment')
   const [loggedIn, setLoggedIn] = useState(!!localStorage.getItem('sls_token'))
+  const [role, setRole] = useState(localStorage.getItem('sls_role'))
+
+  const isAdmin = role === 'ADMIN'
+  const canManageLoans = role === 'ADMIN' || role === 'STAFF'
+
+  const navBtn = (id, label, show = true) =>
+    show && <button className={view === id ? 'active' : ''} onClick={() => setView(id)}>{label}</button>
 
   return (
-    <div className="container">
-      <header>
+    <div className="container fade-in">
+      <header className="layout-header">
         <h1>SLS Equipment Lending</h1>
-
-        <Login onLogin={() => setLoggedIn(!!localStorage.getItem('sls_token'))} />
-
-        <nav>
-          <button onClick={() => setView('equipment')}>Equipment</button>
-          <button onClick={() => setView('new-equipment')}>Add Equipment</button>
-          <button onClick={() => setView('request')}>Request Loan</button>
-          <button onClick={() => setView('loans')}>Loan Requests</button>
+        <Login onLogin={() => {
+          setLoggedIn(!!localStorage.getItem('sls_token'))
+          setRole(localStorage.getItem('sls_role'))
+        }} />
+        <nav className="layout-nav">
+          {navBtn('equipment','Equipment')}
+          {navBtn('new-equipment','Add Equipment', isAdmin)}
+          {navBtn('request','Request Loan')}
+          {navBtn('loans','Loan Requests', canManageLoans)}
         </nav>
       </header>
 
       <main>
-        {view === 'equipment' && <EquipmentList />}
-        {view === 'new-equipment' && <EquipmentForm onSaved={() => setView('equipment')} />}
-        {view === 'request' && <LoanRequestForm />}
-        {view === 'loans' && <LoanList />}
+        {view === 'equipment' && <EquipmentList role={role} />}
+        {view === 'new-equipment' && <EquipmentForm role={role} onSaved={() => setView('equipment')} />}
+        {view === 'request' && <LoanRequestForm role={role} />}
+        {view === 'loans' && <LoanList role={role} />}
       </main>
 
       <footer>

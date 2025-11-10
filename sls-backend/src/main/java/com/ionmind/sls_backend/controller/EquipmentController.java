@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import com.ionmind.sls_backend.exception.ForbiddenException;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/equipment")
@@ -36,7 +38,7 @@ public class EquipmentController {
     @PostMapping
     public ResponseEntity<?> create(@RequestHeader(name="X-Auth-Token", required=false) String token, @RequestBody Equipment equipment) {
         if (!authService.hasRole(token, Role.ADMIN)) {
-            return ResponseEntity.status(403).body("Only ADMIN can create equipment");
+            throw new ForbiddenException("Only ADMIN can create equipment");
         }
         Equipment saved = equipmentService.save(equipment);
         return ResponseEntity.ok(saved);
@@ -45,7 +47,7 @@ public class EquipmentController {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@RequestHeader(name="X-Auth-Token", required=false) String token, @PathVariable Long id, @RequestBody Equipment payload) {
         if (!authService.hasRole(token, Role.ADMIN)) {
-            return ResponseEntity.status(403).body("Only ADMIN can update equipment");
+            throw new ForbiddenException("Only ADMIN can update equipment");
         }
         return equipmentService.findById(id).map(e -> {
             e.setName(payload.getName());
@@ -59,7 +61,7 @@ public class EquipmentController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@RequestHeader(name="X-Auth-Token", required=false) String token, @PathVariable Long id) {
         if (!authService.hasRole(token, Role.ADMIN)) {
-            return ResponseEntity.status(403).body("Only ADMIN can delete equipment");
+            throw new ForbiddenException("Only ADMIN can delete equipment");
         }
         equipmentService.delete(id);
         return ResponseEntity.ok().build();

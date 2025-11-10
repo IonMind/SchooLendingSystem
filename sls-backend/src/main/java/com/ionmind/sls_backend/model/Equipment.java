@@ -17,4 +17,12 @@ public class Equipment {
 
     // total available quantity in store (fixed)
     private int totalQuantity;
+
+    // units currently allocated (approved but not yet returned)
+    private int allocatedQuantity;
+
+    @Transient
+    public int getAvailableQuantity() {
+        return totalQuantity - allocatedQuantity;
+    }
 }

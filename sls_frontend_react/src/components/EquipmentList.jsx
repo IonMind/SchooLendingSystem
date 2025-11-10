@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../api'
 
-export default function EquipmentList() {
+export default function EquipmentList({ role: roleProp }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
+  const role = roleProp || localStorage.getItem('sls_role')
+  const isAdmin = role === 'ADMIN'
 
   async function load() {
     setLoading(true)
@@ -21,11 +23,13 @@ export default function EquipmentList() {
   }
 
   return (
-    <div>
+    <div className="section">
       <h2>Equipment</h2>
       {loading ? <p>Loading...</p> : (
         <table className="table">
-          <thead><tr><th>ID</th><th>Name</th><th>Category</th><th>Condition</th><th>Total</th><th>Actions</th></tr></thead>
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Category</th><th>Condition</th><th>Total</th><th>Actions</th></tr>
+          </thead>
           <tbody>
             {items && items.map(it => (
               <tr key={it.id}>
@@ -34,7 +38,7 @@ export default function EquipmentList() {
                 <td>{it.category}</td>
                 <td>{it.conditionDesc}</td>
                 <td>{it.totalQuantity}</td>
-                <td><button onClick={() => remove(it.id)}>Delete</button></td>
+                <td>{isAdmin && <button className="danger" onClick={() => remove(it.id)}>Delete</button>}</td>
               </tr>
             ))}
           </tbody>
