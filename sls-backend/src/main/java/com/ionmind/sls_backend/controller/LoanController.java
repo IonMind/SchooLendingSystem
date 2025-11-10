@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import com.ionmind.sls_backend.exception.ForbiddenException;
+import com.ionmind.sls_backend.exception.UnauthorizedException;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -29,12 +31,8 @@ public class LoanController {
 
     @PostMapping
     public ResponseEntity<?> createRequest(@Valid @RequestBody LoanRequestDto dto) {
-        try {
-            LoanRequest lr = loanService.createRequest(dto);
-            return ResponseEntity.ok(lr);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        LoanRequest lr = loanService.createRequest(dto);
+        return ResponseEntity.ok(lr);
     }
 
     @GetMapping
@@ -50,45 +48,33 @@ public class LoanController {
     @PostMapping("/{id}/approve")
     public ResponseEntity<?> approve(@RequestHeader(name="X-Auth-Token", required=false) String token, @PathVariable Long id) {
         var userOpt = authService.getUserByToken(token);
-        if (userOpt.isEmpty()) return ResponseEntity.status(401).body("Unauthorized");
+        if (userOpt.isEmpty()) throw new UnauthorizedException("Unauthorized");
         User user = userOpt.get();
         if (user.getRole() != Role.ADMIN && user.getRole() != Role.STAFF) {
-            return ResponseEntity.status(403).body("Only staff/admin can approve");
+            throw new ForbiddenException("Only staff/admin can approve");
         }
-        try {
-            return ResponseEntity.ok(loanService.approveRequest(id));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(loanService.approveRequest(id));
     }
 
     @PostMapping("/{id}/reject")
     public ResponseEntity<?> reject(@RequestHeader(name="X-Auth-Token", required=false) String token, @PathVariable Long id, @RequestBody(required = false) String reason) {
         var userOpt = authService.getUserByToken(token);
-        if (userOpt.isEmpty()) return ResponseEntity.status(401).body("Unauthorized");
+        if (userOpt.isEmpty()) throw new UnauthorizedException("Unauthorized");
         User user = userOpt.get();
         if (user.getRole() != Role.ADMIN && user.getRole() != Role.STAFF) {
-            return ResponseEntity.status(403).body("Only staff/admin can reject");
+            throw new ForbiddenException("Only staff/admin can reject");
         }
-        try {
-            return ResponseEntity.ok(loanService.rejectRequest(id, reason));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(loanService.rejectRequest(id, reason));
     }
 
     @PostMapping("/{id}/return")
     public ResponseEntity<?> markReturned(@RequestHeader(name="X-Auth-Token", required=false) String token, @PathVariable Long id) {
         var userOpt = authService.getUserByToken(token);
-        if (userOpt.isEmpty()) return ResponseEntity.status(401).body("Unauthorized");
+        if (userOpt.isEmpty()) throw new UnauthorizedException("Unauthorized");
         User user = userOpt.get();
         if (user.getRole() != Role.ADMIN && user.getRole() != Role.STAFF) {
-            return ResponseEntity.status(403).body("Only staff/admin can mark returned");
+            throw new ForbiddenException("Only staff/admin can mark returned");
         }
-        try {
-            return ResponseEntity.ok(loanService.markReturned(id));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+        return ResponseEntity.ok(loanService.markReturned(id));
     }
 }

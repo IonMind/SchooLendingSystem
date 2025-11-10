@@ -65,41 +65,39 @@ export default function Login({ onLogin }) {
 
   if (loggedIn) {
     return (
-      <div style={{ marginBottom: '10px' }}>
-        <strong>Logged in as:</strong> {currentUser} ({currentRole})
-        <button onClick={logout} style={{ marginLeft: '10px' }}>
+      <div className="section" style={{ padding: '12px 16px' }}>
+        <strong>Logged in:</strong> {currentUser} ({currentRole})
+        <button className="outline" onClick={logout} style={{ marginLeft: '8px' }}>
           Logout
         </button>
-        <p>{msg}</p>
+        {msg && <p style={{ margin: '6px 0 0', fontSize: '.75rem' }}>{msg}</p>}
       </div>
     );
   }
 
   return (
-    <div style={{ marginBottom: '10px' }}>
+    <div className="section" style={{ padding: '12px 16px' }}>
       <strong>Login / Signup</strong>
-      <br />
-      <input
-        placeholder="username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-      />
-      <input
-        placeholder="password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <select value={role} onChange={(e) => setRole(e.target.value)}>
-        <option value="STUDENT">Student</option>
-        <option value="STAFF">Staff</option>
-        <option value="ADMIN">Admin</option>
-      </select>
-      <div>
-        <button onClick={login}>Login</button>
-        <button onClick={signup}>Signup</button>
+      <div className="form" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', marginTop: '8px' }}>
+        <label>Username
+          <input value={username} onChange={e => setUsername(e.target.value)} />
+        </label>
+        <label>Password
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
+        </label>
+        <label>Role
+          <select value={role} onChange={e => setRole(e.target.value)}>
+            <option value="STUDENT">Student</option>
+            <option value="STAFF">Staff</option>
+            <option value="ADMIN">Admin</option>
+          </select>
+        </label>
       </div>
-      <p>{msg}</p>
+      <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+        <button onClick={login}>Login</button>
+        <button className="outline" onClick={signup}>Signup</button>
+      </div>
+      {msg && <p style={{ margin: '6px 0 0', fontSize: '.7rem' }}>{msg}</p>}
     </div>
   );
 }

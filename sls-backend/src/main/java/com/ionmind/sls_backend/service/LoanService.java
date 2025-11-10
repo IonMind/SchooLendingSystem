@@ -6,6 +6,7 @@ import com.ionmind.sls_backend.model.LoanRequest;
 import com.ionmind.sls_backend.repository.EquipmentRepository;
 import com.ionmind.sls_backend.repository.LoanRequestRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -21,29 +22,7 @@ public class LoanService {
         this.equipmentRepository = equipmentRepository;
     }
 
-    public LoanRequest createRequest(LoanRequestDto dto) {
-        Optional<Equipment> eqOpt = equipmentRepository.findById(dto.getEquipmentId());
-        if (!eqOpt.isPresent()) throw new IllegalArgumentException("Equipment not found");
-
-        Equipment equipment = eqOpt.get();
-        LoanRequest lr = new LoanRequest();
-        lr.setEquipment(equipment);
-        lr.setRequesterName(dto.getRequesterName());
-        lr.setQuantity(dto.getQuantity());
-        lr.setStartDate(dto.getStartDate());
-        lr.setEndDate(dto.getEndDate());
-        lr.setStatus("PENDING");
-        lr.setNote(dto.getNote());
-
-        // Basic validation
-        if (lr.getStartDate() == null || lr.getEndDate() == null || lr.getStartDate().isAfter(lr.getEndDate())) {
-            throw new IllegalArgumentException("Invalid start/end date");
-        }
-        if (lr.getQuantity() <= 0) throw new IllegalArgumentException("Quantity must be positive");
-
-        return loanRequestRepository.save(lr);
-    }
-
+    // Query methods first
     public List<LoanRequest> listAll() {
         return loanRequestRepository.findAll();
     }
@@ -52,44 +31,78 @@ public class LoanService {
         return loanRequestRepository.findById(id);
     }
 
+    // Creation
+    public LoanRequest createRequest(LoanRequestDto dto) {
+        Optional<Equipment> equipmentOpt = equipmentRepository.findById(dto.getEquipmentId());
+        if (!equipmentOpt.isPresent()) throw new IllegalArgumentException("Equipment not found");
+
+        Equipment equipment = equipmentOpt.get();
+        LoanRequest loanRequest = new LoanRequest();
+        loanRequest.setEquipment(equipment);
+        loanRequest.setRequesterName(dto.getRequesterName());
+        loanRequest.setQuantity(dto.getQuantity());
+        loanRequest.setStartDate(dto.getStartDate());
+        loanRequest.setEndDate(dto.getEndDate());
+        loanRequest.setStatus("PENDING");
+        loanRequest.setNote(dto.getNote());
+
+        // Basic validation
+        if (loanRequest.getStartDate() == null || loanRequest.getEndDate() == null
+                || loanRequest.getStartDate().isAfter(loanRequest.getEndDate())) {
+            throw new IllegalArgumentException("Invalid start/end date");
+        }
+        if (loanRequest.getQuantity() <= 0) throw new IllegalArgumentException("Quantity must be positive");
+
+        return loanRequestRepository.save(loanRequest);
+    }
+
+    // State transitions
+    @Transactional
     public LoanRequest approveRequest(Long requestId) {
-        LoanRequest lr = loanRequestRepository.findById(requestId).orElseThrow(() -> new IllegalArgumentException("Request not found"));
-        if (!"PENDING".equals(lr.getStatus())) {
+        LoanRequest loanRequest = loanRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found"));
+        if (!"PENDING".equals(loanRequest.getStatus())) {
             throw new IllegalStateException("Only PENDING requests can be approved");
         }
 
-        // Check overlapping approved requests for same equipment
-        Equipment equipment = lr.getEquipment();
-        LocalDate start = lr.getStartDate();
-        LocalDate end = lr.getEndDate();
+        Equipment equipment = loanRequest.getEquipment();
 
-        List<LoanRequest> overlaps = loanRequestRepository.findApprovedOverlapping(equipment, start, end);
-        int alreadyBooked = overlaps.stream().mapToInt(LoanRequest::getQuantity).sum();
-
-        if (alreadyBooked + lr.getQuantity() > equipment.getTotalQuantity()) {
-            throw new IllegalStateException("Not enough quantity available for the requested date range");
+        // capacity check against remaining available (total - allocated)
+        if (equipment.getAllocatedQuantity() + loanRequest.getQuantity() > equipment.getTotalQuantity()) {
+            throw new IllegalStateException("Not enough quantity available");
         }
 
-        lr.setStatus("APPROVED");
-        return loanRequestRepository.save(lr);
+        loanRequest.setStatus("APPROVED");
+        equipment.setAllocatedQuantity(equipment.getAllocatedQuantity() + loanRequest.getQuantity());
+        equipmentRepository.save(equipment);
+        return loanRequestRepository.save(loanRequest);
     }
 
     public LoanRequest rejectRequest(Long requestId, String reason) {
-        LoanRequest lr = loanRequestRepository.findById(requestId).orElseThrow(() -> new IllegalArgumentException("Request not found"));
-        if (!"PENDING".equals(lr.getStatus())) {
+        LoanRequest loanRequest = loanRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found"));
+        if (!"PENDING".equals(loanRequest.getStatus())) {
             throw new IllegalStateException("Only PENDING requests can be rejected");
         }
-        lr.setStatus("REJECTED");
-        lr.setNote(reason);
-        return loanRequestRepository.save(lr);
+        loanRequest.setStatus("REJECTED");
+        loanRequest.setNote(reason);
+        return loanRequestRepository.save(loanRequest);
     }
 
+    @Transactional
     public LoanRequest markReturned(Long requestId) {
-        LoanRequest lr = loanRequestRepository.findById(requestId).orElseThrow(() -> new IllegalArgumentException("Request not found"));
-        if (!"APPROVED".equals(lr.getStatus())) {
+        LoanRequest loanRequest = loanRequestRepository.findById(requestId)
+                .orElseThrow(() -> new IllegalArgumentException("Request not found"));
+        if (!"APPROVED".equals(loanRequest.getStatus())) {
             throw new IllegalStateException("Only APPROVED loans can be marked returned");
         }
-        lr.setStatus("RETURNED");
-        return loanRequestRepository.save(lr);
+        loanRequest.setStatus("RETURNED");
+
+        Equipment equipment = loanRequest.getEquipment();
+        int newAllocated = equipment.getAllocatedQuantity() - loanRequest.getQuantity();
+        equipment.setAllocatedQuantity(Math.max(0, newAllocated));
+        equipmentRepository.save(equipment);
+
+        return loanRequestRepository.save(loanRequest);
     }
 }
